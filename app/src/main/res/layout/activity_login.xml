@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/white">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Login"
+        android:textSize="28sp"
+        android:textColor="#0d141c"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp"
+        />
+
+    <EditText
+        android:id="@+id/loginIdInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Username"
+        android:inputType="textPersonName"
+        android:padding="12dp"
+        android:background="@drawable/edittext_background"
+        android:layout_marginBottom="12dp"
+        />
+
+    <EditText
+        android:id="@+id/loginPasswordInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Password"
+        android:inputType="textPassword"
+        android:padding="12dp"
+        android:background="@drawable/edittext_background"
+        android:layout_marginBottom="8dp"
+        />
+
+    <CheckBox
+        android:id="@+id/loginShowPasswordCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show Password"
+        android:layout_marginBottom="16dp"
+        />
+    <Button
+        android:id="@+id/biometricLoginButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="지문으로 로그인"
+        android:layout_marginTop="16dp" />
+    <Button
+        android:id="@+id/loginButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Log In"
+        android:textAllCaps="false"
+        android:backgroundTint="#0c77f2"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="12dp"
+        />
+
+    <Button
+        android:id="@+id/signupButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Sign Up"
+        android:textAllCaps="false"
+        android:backgroundTint="#49709c"
+        android:textColor="@android:color/white"
+        />
+    <TextView
+        android:id="@+id/passwordTableTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="비밀번호 테이블 내용이 여기 표시됩니다"
+        android:textSize="14sp"
+        android:padding="8dp"
+        android:scrollbars="vertical"
+        android:visibility="visible" />
+
+</LinearLayout>
