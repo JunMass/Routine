@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:padding="16dp"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/tvRoutineTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="루틴 제목"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/editDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="100dp"
+        android:hint="수행 내용을 입력하세요"
+        android:textSize="16sp"
+        android:textColor="#222222"
+        android:padding="12dp" />
+
+
+    <ImageView
+        android:id="@+id/imagePreview"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginTop="8dp"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnSelectPhoto"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="사진 선택" />
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="저장"
+        android:layout_marginTop="16dp"/>
+</LinearLayout>
