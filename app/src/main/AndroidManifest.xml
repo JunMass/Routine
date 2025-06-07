@@ -14,7 +14,7 @@
         tools:targetApi="33"
         android:enableOnBackInvokedCallback="true">
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.setting.LoginActivity"
             android:exported="true"
             android:theme="@style/Theme.Myapp">
             <intent-filter>
@@ -23,9 +23,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.setting.SettingActivity">
-
-        </activity>
+        <activity android:name=".ui.setting.SettingActivity"></activity>
+        <activity android:name=".MainActivity"></activity>
+        <activity android:name=".ui.setting.ChangePasswordActivity"></activity>
+        <activity android:name=".ui.setting.SignUpActivity"></activity>
     </application>
 
 </manifest>
