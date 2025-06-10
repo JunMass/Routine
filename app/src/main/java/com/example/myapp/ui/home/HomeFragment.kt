@@ -13,6 +13,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -33,6 +34,17 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.util.*
 import androidx.core.net.toUri
+import com.example.myapp.weather.LocationProvider
+import com.example.myapp.weather.WeatherRepository
+import androidx.activity.result.ActivityResultLauncher
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -60,10 +72,34 @@ class HomeFragment : Fragment() {
         }
     }
 
+    private lateinit var locationProvider: LocationProvider
+    private lateinit var weatherRepository: WeatherRepository
+    private lateinit var permissionLauncher: ActivityResultLauncher<String>
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
+
+        return binding.root
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                requestWeather()
+            } else {
+                Toast.makeText(requireContext(), "위치 권한이 필요합니다", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         // 오늘 날짜 표시
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -72,15 +108,9 @@ class HomeFragment : Fragment() {
         // 어댑터 생성 (onAddClick 람다 전달)
         adapter = RoutineAdapter(
             emptyList(),
-            onItemClick = { routine ->
-                showRoutineDetails(routine)
-            },
-            onAddClick = {
-                showAddRoutineDialog()
-            },
-            onStartClick = { routine ->
-                showRecordBottomSheet(routine)
-            }
+            onItemClick = { routine -> showRoutineDetails(routine) },
+            onAddClick = { showAddRoutineDialog() },
+            onStartClick = { routine -> showRecordBottomSheet(routine) }
         )
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -89,8 +119,35 @@ class HomeFragment : Fragment() {
             adapter.submitList(routines)
         }
 
-        return binding.root
+        locationProvider = LocationProvider(requireActivity())
+        weatherRepository = WeatherRepository(requireContext())
+
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            requestWeather()
+        } else {
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
     }
+
+    private fun requestWeather() {
+        locationProvider.getLocation { lat, lon ->
+            Log.d("WeatherDebug", "받은 위치: lat=$lat, lon=$lon")
+            weatherRepository.getWeather(
+                lat, lon,
+                onSuccess = { weatherText ->
+                    binding.weatherTextView.text = weatherText
+                },
+                onFailure = {
+                    Toast.makeText(requireContext(), "날씨 정보를 불러오지 못했습니다", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    }
+
     private fun showAddRoutineDialog() {
         val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
