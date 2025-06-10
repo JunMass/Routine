@@ -9,6 +9,8 @@ interface WeatherService {
     fun getCurrentWeather(
         @Query("lat") latitude: Double,
         @Query("lon") longitude: Double,
-        @Query("appid") apiKey: String
+        @Query("appid") apiKey: String,
+        @Query("lang") lang: String,
+        @Query("units") units: String
     ): Call<WeatherResponse>
 }

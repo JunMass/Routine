@@ -37,14 +37,11 @@ import androidx.core.net.toUri
 import com.example.myapp.weather.LocationProvider
 import com.example.myapp.weather.WeatherRepository
 import androidx.activity.result.ActivityResultLauncher
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
 import android.util.Log
+import com.bumptech.glide.Glide
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -138,8 +135,12 @@ class HomeFragment : Fragment() {
             Log.d("WeatherDebug", "받은 위치: lat=$lat, lon=$lon")
             weatherRepository.getWeather(
                 lat, lon,
-                onSuccess = { weatherText ->
-                    binding.weatherTextView.text = weatherText
+                onSuccess = { temp, iconUrl, cityName ->
+                    binding.weatherTextView.text = String.format("%.1f°C \n %s", temp, cityName)
+                    // 아이콘 이미지뷰가 있다고 가정: weatherIconImageView
+                    Glide.with(this)
+                        .load(iconUrl)
+                        .into(binding.weatherIconImageView)
                 },
                 onFailure = {
                     Toast.makeText(requireContext(), "날씨 정보를 불러오지 못했습니다", Toast.LENGTH_SHORT).show()
