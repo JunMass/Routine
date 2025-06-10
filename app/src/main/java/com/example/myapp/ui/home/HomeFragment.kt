@@ -136,7 +136,7 @@ class HomeFragment : Fragment() {
             weatherRepository.getWeather(
                 lat, lon,
                 onSuccess = { temp, iconUrl, cityName ->
-                    binding.weatherTextView.text = String.format("%.1f°C \n %s", temp, cityName)
+                    binding.weatherTextView.text = String.format(Locale.getDefault(), "%.1f°C \n %s", temp, cityName)
                     // 아이콘 이미지뷰가 있다고 가정: weatherIconImageView
                     Glide.with(this)
                         .load(iconUrl)
@@ -217,7 +217,7 @@ class HomeFragment : Fragment() {
             val existingRecord = viewModel.getTodayRecord(routine.id, today)
 
             // 다이얼로그 UI 구성
-            val dialogView = layoutInflater.inflate(R.layout.dialog_record_routine, null)
+            val dialogView = layoutInflater.inflate(R.layout.dialog_record_routine, requireActivity().window.decorView as ViewGroup, false)
             val titleText = dialogView.findViewById<TextView>(R.id.tvRoutineTitle)
             val editDetail = dialogView.findViewById<EditText>(R.id.editDetail)
             val btnSave = dialogView.findViewById<Button>(R.id.btnSave)

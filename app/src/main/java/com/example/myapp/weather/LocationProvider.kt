@@ -6,10 +6,8 @@ import com.google.android.gms.location.LocationServices
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
 import android.widget.Toast
 import android.location.Location
-import android.util.Log
 
 
 class LocationProvider (

@@ -9,7 +9,7 @@ import retrofit2.Response
 
 
 
-class WeatherRepository(private val context: Context) {
+class WeatherRepository(context: Context) {
     private val apiKey = context.getString(R.string.open_weather_api_key)
 
     val cityNameMap = mapOf(
