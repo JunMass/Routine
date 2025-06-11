@@ -40,7 +40,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
