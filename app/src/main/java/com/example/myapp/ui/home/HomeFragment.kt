@@ -40,6 +40,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,7 +69,14 @@ class HomeFragment : Fragment() {
             }
         }
     }
-
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                Toast.makeText(requireContext(), "알림 권한이 허용되었습니다.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "알림을 받으려면 권한을 허용해야 합니다.", Toast.LENGTH_SHORT).show()
+            }
+        }
     private lateinit var locationProvider: LocationProvider
     private lateinit var weatherRepository: WeatherRepository
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
@@ -79,7 +87,15 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
-
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13 이상에서만
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -96,13 +112,13 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        askNotificationPermission() // 권한 요청 함수 호출
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         binding.textToday.text = today
 
         adapter = RoutineAdapter(
             emptyList(),
-            onItemClick = { routine -> showRoutineDetails(routine) },
+            onItemClick = { routine -> showEditRoutineDialog(routine) }, // 기존: showRoutineDetails -> 변경: showEditRoutineDialog
             onAddClick = { showAddRoutineDialog() },
             onStartClick = { routine -> showRecordBottomSheet(routine) }
         )
@@ -139,6 +155,76 @@ class HomeFragment : Fragment() {
         } else {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
+    }
+
+    private fun showEditRoutineDialog(routine: RoutineEntity) {
+        val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("루틴 수정")
+            .setView(dialogBinding.root)
+            .setPositiveButton("저장", null)
+            .setNegativeButton("취소", null)
+            .setNeutralButton("삭제") { _, _ ->
+                // 삭제 버튼 클릭 시 루틴과 알람 삭제
+                viewModel.deleteRoutine(routine)
+                Toast.makeText(requireContext(), "'${routine.title}' 루틴이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+            }
+            .show()
+
+        // 기존 루틴 데이터로 다이얼로그 내용을 채웁니다.
+        dialogBinding.editTitle.setText(routine.title)
+        dialogBinding.timeButton.text = routine.startTime.toString()
+        dialogBinding.switchActive.isChecked = routine.isActive // '알림 활성화' 상태 불러오기
+
+        // 요일 체크박스 상태 설정
+        Weekday.entries.forEach { day ->
+            dialogBinding.root.findViewWithTag<CheckBox>("cb_$day")?.isChecked = routine.repeatOn.contains(day)
+        }
+
+        // 시간 버튼 설정은 showAddRoutineDialog와 동일하게 구현
+        dialogBinding.timeButton.setOnClickListener {
+            val currentTime = routine.startTime // 기존 루틴의 시간을 기본값으로 설정
+            TimePickerDialog(
+                requireContext(),
+                { _, hourOfDay, minute ->
+                    val selectedTime = LocalTime.of(hourOfDay, minute)
+                    dialogBinding.timeButton.text = selectedTime.toString()
+                },
+                currentTime.hour,
+                currentTime.minute,
+                true // 24시간 형식으로 표시
+            ).show()
+        }
+
+        // 저장 버튼 클릭 시 'updateRoutine'을 호출합니다.
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+            .setOnClickListener {
+                val title = dialogBinding.editTitle.text.toString().trim()
+                if (title.isEmpty()) {
+                    dialogBinding.editTitle.error = "제목을 입력하세요"
+                    return@setOnClickListener
+                }
+
+                val updatedRepeatOn = Weekday.entries.filter { day ->
+                    dialogBinding.root.findViewWithTag<CheckBox>("cb_$day")?.isChecked == true
+                }.toSet()
+
+                val timeParts = dialogBinding.timeButton.text.split(":")
+                val updatedStartTime = LocalTime.of(timeParts[0].toInt(), timeParts[1].toInt())
+
+                val updatedIsActive = dialogBinding.switchActive.isChecked // 수정된 '알림 활성화' 상태
+
+                // 기존 routine 객체에 변경된 값들을 복사하여 새로운 객체 생성
+                val updatedRoutine = routine.copy(
+                    title = title,
+                    repeatOn = updatedRepeatOn,
+                    startTime = updatedStartTime,
+                    isActive = updatedIsActive
+                )
+
+                viewModel.updateRoutine(updatedRoutine)
+                dialog.dismiss()
+            }
     }
     private fun showAddRoutineDialog() {
         val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
@@ -187,7 +273,8 @@ class HomeFragment : Fragment() {
                     timeParts[0].toInt(),
                     timeParts[1].toInt()
                 )
-                viewModel.addRoutine(title, repeatOn, startTime, true)
+                val isActive = dialogBinding.switchActive.isChecked // 스위치의 실제 상태를 읽어옵니다.
+                viewModel.addRoutine(title, repeatOn, startTime, isActive)
                 dialog.dismiss()
             }
 

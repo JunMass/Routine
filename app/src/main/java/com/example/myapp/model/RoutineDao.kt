@@ -12,6 +12,9 @@ import java.time.LocalDate
 @Dao
 interface RoutineDao {
 
+    @Query("SELECT * FROM routines WHERE id = :id")
+    suspend fun getRoutineByIdSuspend(id: Int): RoutineEntity?
+
     /** 전체 루틴 리스트를 LiveData로 반환 */
     @Query("SELECT * FROM routines")
     fun getAllRoutines(): LiveData<List<RoutineEntity>>
