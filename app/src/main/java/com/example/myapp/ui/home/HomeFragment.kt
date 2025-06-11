@@ -50,6 +50,7 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: RoutineViewModel by activityViewModels()
+    private val weatherViewModel: WeatherViewModel by activityViewModels()
     private lateinit var adapter: RoutineAdapter
 
     private var selectedPhotoUri: Uri? = null
@@ -77,7 +78,6 @@ class HomeFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
-
         return binding.root
     }
 
@@ -88,7 +88,7 @@ class HomeFragment : Fragment() {
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             if (isGranted) {
-                requestWeather()
+                weatherViewModel.loadWeather(locationProvider, weatherRepository)
             } else {
                 Toast.makeText(requireContext(), "위치 권한이 필요합니다", Toast.LENGTH_SHORT).show()
             }
@@ -98,11 +98,9 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 오늘 날짜 표시
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         binding.textToday.text = today
 
-        // 어댑터 생성 (onAddClick 람다 전달)
         adapter = RoutineAdapter(
             emptyList(),
             onItemClick = { routine -> showRoutineDetails(routine) },
@@ -119,36 +117,30 @@ class HomeFragment : Fragment() {
         locationProvider = LocationProvider(requireActivity())
         weatherRepository = WeatherRepository(requireContext())
 
+        // 날씨 LiveData observe
+        weatherViewModel.weatherInfo.observe(viewLifecycleOwner) { info ->
+            binding.weatherTextView.text = String.format(Locale.getDefault(), "%.1f°C \n %s", info.main.temp, info.name)
+            Glide.with(this)
+                .load(info.weather[0].icon)
+                .into(binding.weatherIconImageView)
+        }
+        weatherViewModel.error.observe(viewLifecycleOwner) { msg ->
+            msg?.let {
+                Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // 최초 1회만 loadWeather 호출
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            requestWeather()
+            weatherViewModel.loadWeather(locationProvider, weatherRepository)
         } else {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
-
-    private fun requestWeather() {
-        locationProvider.getLocation { lat, lon ->
-            Log.d("WeatherDebug", "받은 위치: lat=$lat, lon=$lon")
-            weatherRepository.getWeather(
-                lat, lon,
-                onSuccess = { temp, iconUrl, cityName ->
-                    binding.weatherTextView.text = String.format(Locale.getDefault(), "%.1f°C \n %s", temp, cityName)
-                    // 아이콘 이미지뷰가 있다고 가정: weatherIconImageView
-                    Glide.with(this)
-                        .load(iconUrl)
-                        .into(binding.weatherIconImageView)
-                },
-                onFailure = {
-                    Toast.makeText(requireContext(), "날씨 정보를 불러오지 못했습니다", Toast.LENGTH_SHORT).show()
-                }
-            )
-        }
-    }
-
     private fun showAddRoutineDialog() {
         val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
