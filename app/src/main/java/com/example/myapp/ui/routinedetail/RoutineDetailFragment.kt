@@ -21,14 +21,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.myapp.R
 import com.example.myapp.databinding.FragmentRoutineDetailBinding
-import com.example.myapp.model.RoutineEntity
 import com.example.myapp.model.RoutineRecordEntity
 import com.example.myapp.util.FileUtils
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 class RoutineDetailFragment : Fragment() {
     private var _binding: FragmentRoutineDetailBinding? = null
@@ -53,13 +51,6 @@ class RoutineDetailFragment : Fragment() {
 
     companion object {
         private const val ARG_ROUTINE_ID = "routine_id"
-        fun newInstance(routineId: Int): RoutineDetailFragment {
-            val fragment = RoutineDetailFragment()
-            val args = Bundle()
-            args.putInt(ARG_ROUTINE_ID, routineId)
-            fragment.arguments = args
-            return fragment
-        }
     }
 
     override fun onCreateView(

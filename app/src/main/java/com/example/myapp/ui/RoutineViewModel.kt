@@ -5,7 +5,6 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.lifecycle.*
 import androidx.room.Room
 import com.example.myapp.Alarm.AlarmReceiver
