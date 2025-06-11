@@ -15,39 +15,52 @@ import com.example.myapp.model.Weekday
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
 
 class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val routineTitle = intent.getStringExtra("ROUTINE_TITLE") ?: "루틴 시간입니다!"
         val routineId = intent.getIntExtra("ROUTINE_ID", 0)
+        if (routineId == 0) return
 
-        // Android 8.0 (Oreo) 이상에서는 알림 채널이 필수입니다.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "routine_alarm_channel",
-                "루틴 알림",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "설정한 루틴의 시작을 알립니다."
+        CoroutineScope(Dispatchers.IO).launch {
+            val db = AppDatabase.getInstance(context)
+            val today = LocalDate.now()
+
+            // 1. 오늘 날짜의 루틴 기록이 있는지 확인
+            val recordCount = db.routineRecordDao().getRecordCountForToday(routineId, today)
+
+            // 2. 기록이 없을 때만 (0개일 때만) 알림을 표시
+            if (recordCount == 0) {
+                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val routineTitle = intent.getStringExtra("ROUTINE_TITLE") ?: "루틴 시간입니다!"
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val channel = NotificationChannel(
+                        "routine_alarm_channel",
+                        "루틴 알림",
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply {
+                        description = "설정한 루틴의 시작을 알립니다."
+                    }
+                    notificationManager.createNotificationChannel(channel)
+                }
+
+                val builder = NotificationCompat.Builder(context, "routine_alarm_channel")
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle(routineTitle)
+                    .setContentText("오늘의 루틴을 실천할 시간이에요! 💪")
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setAutoCancel(true)
+
+                notificationManager.notify(routineId, builder.build())
             }
-            notificationManager.createNotificationChannel(channel)
+
+            // 3. 알림 표시 여부와 상관없이, 다음 알람은 항상 다시 설정
+            rescheduleNextAlarm(context, routineId)
         }
-
-        val builder = NotificationCompat.Builder(context, "routine_alarm_channel")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(routineTitle)
-            .setContentText("오늘의 루틴을 실천할 시간이에요! 💪")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-
-        notificationManager.notify(routineId, builder.build())
-
-        // 알림을 표시한 후, 다음 알람을 다시 스케줄링
-        rescheduleNextAlarm(context, routineId)
     }
 
     private fun rescheduleNextAlarm(context: Context, routineId: Int) {
