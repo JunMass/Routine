@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapp.R
@@ -13,7 +14,8 @@ class RoutineAdapter(
     private var routines: List<RoutineEntity>,
     private val onItemClick: (routine: RoutineEntity) -> Unit,
     private val onAddClick: () -> Unit,
-    private val onStartClick: (routine: RoutineEntity) -> Unit
+    private val onStartClick: (routine: RoutineEntity) -> Unit,
+    private val onEditClick: (routine: RoutineEntity) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -51,6 +53,11 @@ class RoutineAdapter(
             val startButton = holder.itemView.findViewById<Button>(R.id.btn_start_routine)
             startButton.setOnClickListener {
                 onStartClick(routine)
+            }
+            // 수정 버튼 클릭 리스너 설정
+            val editButton = holder.itemView.findViewById<ImageButton>(R.id.btn_edit_routine)
+            editButton.setOnClickListener {
+                onEditClick(routine)
             }
 
         } else if (holder is AddButtonViewHolder) {

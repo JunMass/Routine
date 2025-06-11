@@ -8,19 +8,35 @@
     card_view:cardCornerRadius="12dp"
     card_view:cardElevation="4dp">
 
-    <TextView
-        android:id="@+id/tv_routine_title"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:textColor="#222222"
-        android:textSize="18sp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp">
 
-    <Button
-        android:id="@+id/btn_start_routine"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:text="Start"/>
+        <TextView
+            android:id="@+id/tv_routine_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#222222"
+            android:textSize="18sp"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/btn_edit_routine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="edit routine details"
+            android:src="@drawable/baseline_more_vert_24" />
+
+        <Button
+            android:id="@+id/btn_start_routine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start"/>
+    </LinearLayout>
 </androidx.cardview.widget.CardView>
 

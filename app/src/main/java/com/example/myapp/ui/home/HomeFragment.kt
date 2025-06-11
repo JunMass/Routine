@@ -118,9 +118,10 @@ class HomeFragment : Fragment() {
 
         adapter = RoutineAdapter(
             emptyList(),
-            onItemClick = { routine -> showEditRoutineDialog(routine) }, // 기존: showRoutineDetails -> 변경: showEditRoutineDialog
+            onItemClick = { routine -> showRoutineDetails(routine) }, // 기존: showRoutineDetails -> 변경: showEditRoutineDialog
             onAddClick = { showAddRoutineDialog() },
-            onStartClick = { routine -> showRecordBottomSheet(routine) }
+            onStartClick = { routine -> showRoutineRecordDialog(routine) },
+            onEditClick = { routine -> showEditRoutineDialog(routine) }
         )
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -287,7 +288,7 @@ class HomeFragment : Fragment() {
         findNavController().navigate(R.id.action_homeFragment_to_routineDetailFragment, bundle)
     }
 
-    private fun showRecordBottomSheet(routine: RoutineEntity) {
+    private fun showRoutineRecordDialog(routine: RoutineEntity) {
         val today = LocalDate.now()
 
         lifecycleScope.launch {
