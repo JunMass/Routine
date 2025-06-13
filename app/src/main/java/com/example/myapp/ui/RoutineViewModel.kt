@@ -13,6 +13,14 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
+import org.tensorflow.lite.Interpreter
+import com.example.myapp.tokenizer.BertTokenizer
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
+
 
 class RoutineViewModel(application: Application) : AndroidViewModel(application) {
     // 1) DB 인스턴스와 Repository 초기화
@@ -184,11 +192,13 @@ class RoutineViewModel(application: Application) : AndroidViewModel(application)
 
     // 루틴 기록을 추가하는 함수
     fun addRecord(routineId: Int, date: LocalDate, detail: String, photoUri: String? = null) {
+        val sentiment = getSentiment(detail)
         val record = RoutineRecordEntity(
             routineId = routineId,
             date = date,
             detail = detail,
-            photoUri = photoUri
+            photoUri = photoUri,
+            sentiment = sentiment
         )
         viewModelScope.launch {
             repository.insertRecord(record)
@@ -202,8 +212,10 @@ class RoutineViewModel(application: Application) : AndroidViewModel(application)
 
     // 루틴 기록을 업데이트하는 함수
     fun updateRecord(record: RoutineRecordEntity) {
+        val sentiment = getSentiment(record.detail ?: "")
+        val updated = record.copy(sentiment = sentiment)
         viewModelScope.launch {
-            repository.updateRecord(record)
+            repository.updateRecord(updated)
         }
     }
 
@@ -226,5 +238,56 @@ class RoutineViewModel(application: Application) : AndroidViewModel(application)
         }
 
         return result
+    }
+
+    private fun getSentiment(inputText: String): Int {
+        var interpreter = Interpreter(loadModelFile())
+        var tokenizer = BertTokenizer(getApplication<Application>().applicationContext)
+        val maxLen = 128
+
+        val (inputIds, attnMask) = tokenizer.encode(inputText)
+        val inputIdBuffer = ByteBuffer.allocateDirect(maxLen * 4).order(ByteOrder.nativeOrder())
+        val attentionBuffer = ByteBuffer.allocateDirect(maxLen * 4).order(ByteOrder.nativeOrder())
+
+        inputIds.forEach { inputIdBuffer.putInt(it) }
+        attnMask.forEach { attentionBuffer.putInt(it) }
+        inputIdBuffer.rewind()
+        attentionBuffer.rewind()
+        val tokenTypeBuffer = ByteBuffer.allocateDirect(128 * 4).order(ByteOrder.nativeOrder())
+        repeat(128) { tokenTypeBuffer.putInt(0) } // KoElectra는 single sentence → 전부 0
+        tokenTypeBuffer.rewind()
+
+        val inputs = arrayOf(attentionBuffer, inputIdBuffer, tokenTypeBuffer)
+        val output = Array(1) { FloatArray(2) }
+
+        interpreter.runForMultipleInputsOutputs(inputs, mapOf(0 to output))
+
+        val result = output[0]
+        val probs = softmax(result)
+        val diff = kotlin.math.abs(probs[1] - probs[0])
+        val sentiment = when {
+            diff <= 0.05 -> 0 // 중립
+            probs[1] > probs[0] -> 1 // 긍정
+            else -> -1 // 부정
+        }
+
+        return sentiment
+    }
+
+    private fun softmax(logits: FloatArray): FloatArray {
+        val max = logits.maxOrNull() ?: 0f
+        val exps = logits.map { Math.exp((it - max).toDouble()) }
+        val sum = exps.sum()
+        return exps.map { (it / sum).toFloat() }.toFloatArray()
+    }
+
+    private fun loadModelFile(): MappedByteBuffer {
+        val assetManager = getApplication<Application>().assets
+        val fileDescriptor = assetManager.openFd("koelectra_fixed.tflite")
+        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+        val fileChannel = inputStream.channel
+        val startOffset = fileDescriptor.startOffset
+        val declaredLength = fileDescriptor.declaredLength
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 }

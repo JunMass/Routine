@@ -18,7 +18,12 @@ class RoutineRecordAdapter (
 
     inner class RecordViewHolder(val binding: RoutineRecordItemBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(record: RoutineRecordEntity) {
-            binding.tvRecordDate.text = record.date.toString()
+            val sentiment = when (record.sentiment) {
+                1 -> " 😊"
+                -1 -> " 😢"
+                else -> " 😐"
+            }
+            binding.tvRecordDate.text = record.date.toString() + sentiment
             binding.tvRecordDetail.text = record.detail ?: ""
             if (!record.photoUri.isNullOrEmpty()) {
                 binding.imageRecordPhoto.visibility = View.VISIBLE

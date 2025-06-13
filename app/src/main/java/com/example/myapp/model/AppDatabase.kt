@@ -11,7 +11,7 @@ import androidx.room.TypeConverters
         RoutineEntity::class,
         RoutineRecordEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(
