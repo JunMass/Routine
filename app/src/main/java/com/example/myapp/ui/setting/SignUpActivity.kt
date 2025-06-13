@@ -5,7 +5,11 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
+import android.text.InputType
+import android.text.method.HideReturnsTransformationMethod
+import android.text.method.PasswordTransformationMethod
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.myapp.R
@@ -18,7 +22,7 @@ class SignUpActivity : AppCompatActivity() {
     lateinit var passwordInput: EditText
     lateinit var passwordConfirmInput: EditText
     lateinit var signUpButton: Button
-
+    lateinit var showPasswordCheckBox :CheckBox
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sign_up)
@@ -27,7 +31,19 @@ class SignUpActivity : AppCompatActivity() {
         passwordInput = findViewById(R.id.signUpPasswordInput)
         passwordConfirmInput = findViewById(R.id.signUpPasswordConfirmInput)
         signUpButton = findViewById(R.id.signUpButton)
+        showPasswordCheckBox = findViewById(R.id.signUpShowPasswordCheckBox)
 
+        showPasswordCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                passwordInput.transformationMethod = HideReturnsTransformationMethod.getInstance()
+                passwordConfirmInput.transformationMethod = HideReturnsTransformationMethod.getInstance()
+            } else {
+                passwordInput.transformationMethod = PasswordTransformationMethod.getInstance()
+                passwordConfirmInput.transformationMethod = PasswordTransformationMethod.getInstance()
+            }
+            passwordInput.setSelection(passwordInput.text.length)
+            passwordConfirmInput.setSelection(passwordConfirmInput.text.length)
+        }
         // DB 초기화 및 테이블 생성
         db = object : SQLiteOpenHelper(this, "PasswordDB", null, 1) {
             override fun onCreate(db: SQLiteDatabase) {

@@ -45,7 +45,7 @@ class ChangePasswordActivity : AppCompatActivity() {
             confirmPasswordEdit.transformationMethod = method
 
             // 커서 끝으로 이동
-            currentPasswordEdit.setSelection(currentPasswordEdit.text.length)
+            //currentPasswordEdit.setSelection(currentPasswordEdit.text.length)
             newPasswordEdit.setSelection(newPasswordEdit.text.length)
             confirmPasswordEdit.setSelection(confirmPasswordEdit.text.length)
         }
@@ -66,7 +66,7 @@ class ChangePasswordActivity : AppCompatActivity() {
                 onCreate(db)
             }
         }.writableDatabase
-        showCurrentPassword()
+        //showCurrentPassword()
 
         saveButton.setOnClickListener {
             val currentPw = currentPasswordEdit.text.toString()

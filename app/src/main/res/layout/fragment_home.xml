@@ -5,44 +5,53 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.home.HomeFragment"
-    android:id="@+id/fragment_home">
+    android:id="@+id/fragment_home"
+    android:padding="16dp">
 
-    <!-- 오늘 날짜 표시 -->
+    <!-- 오늘 날짜 -->
     <TextView
         android:id="@+id/text_today"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="30sp"
+        android:textSize="26sp"
         android:textStyle="bold"
+        android:textColor="@android:color/black"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"/>
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 텍스트와 아이콘을 가로로 묶어서 중앙 배치 -->
-    <LinearLayout
+    <!-- 날씨 정보 -->
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/weatherRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         app:layout_constraintTop_toBottomOf="@id/text_today"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp">
+        android:layout_marginTop="16dp">
 
         <ImageView
             android:id="@+id/weatherIconImageView"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="8dp"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:contentDescription="날씨 아이콘"/>
+
         <TextView
             android:id="@+id/weatherTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="날씨 로딩 중..."
-            android:textSize="15sp" />
-    </LinearLayout>
+            android:textSize="16sp"
+            android:textColor="@android:color/black"
+            app:layout_constraintStart_toEndOf="@id/weatherIconImageView"
+            app:layout_constraintTop_toTopOf="@id/weatherIconImageView"
+            android:layout_marginStart="12dp"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- 리스트 -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="0dp"
@@ -52,5 +61,5 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:clipToPadding="false"
-        android:padding="8dp"/>
+        android:paddingTop="16dp"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
