@@ -11,7 +11,6 @@ import retrofit2.Response
 
 class WeatherRepository(context: Context) {
     private val apiKey = context.getString(R.string.open_weather_api_key)
-
     val cityNameMap = mapOf(
         "Seoul" to "서울특별시",
         "Busan" to "부산광역시",
