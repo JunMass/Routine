@@ -260,8 +260,14 @@ class HomeFragment : Fragment() {
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
             .setOnClickListener {
                 val title = dialogBinding.editTitle.text.toString().trim()
+                val isActive = dialogBinding.switchActive.isChecked // 스위치의 실제 상태를 읽어옵니다.
                 if (title.isEmpty()) {
                     dialogBinding.editTitle.error = "제목을 입력하세요"
+                    return@setOnClickListener
+                }
+                val timeButtonText = dialogBinding.timeButton.text.toString()
+                if (isActive && timeButtonText == "시간 설정") { // "시간 설정" 문자열 리소스로 비교
+                    Toast.makeText(requireContext(), "알림을 받으려면 시간을 설정해야 합니다.", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
                 val repeatOn = Weekday.entries.filter { day ->
@@ -269,15 +275,22 @@ class HomeFragment : Fragment() {
                 }.toSet().takeIf { it.isNotEmpty() } ?: setOf(LocalDate.now().dayOfWeek.let {
                     Weekday.valueOf(it.name)
                 })
-                val timeParts = dialogBinding.timeButton.text.split(":")
-                val startTime = LocalTime.of(
-                    timeParts[0].toInt(),
-                    timeParts[1].toInt()
-                )
-                val isActive = dialogBinding.switchActive.isChecked // 스위치의 실제 상태를 읽어옵니다.
+                val startTime = if (isActive) {
+                    // 위에서 유효성 검사를 통과했으므로, 이 시점에서 timeButtonText는 항상 "HH:mm" 형식임이 보장됩니다.
+                    val timeParts = timeButtonText.split(":")
+                    LocalTime.of(
+                        timeParts[0].toInt(),
+                        timeParts[1].toInt()
+                    )
+                } else {
+                    // 알림이 꺼져있으면 시간은 중요하지 않으므로 기본값을 사용합니다.
+                    LocalTime.MIDNIGHT
+                }
+
                 viewModel.addRoutine(title, repeatOn, startTime, isActive)
                 dialog.dismiss()
             }
+
 
     }
 

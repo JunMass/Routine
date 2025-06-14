@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.lifecycle.*
 import androidx.room.Room
 import com.example.myapp.Alarm.AlarmReceiver
@@ -80,7 +81,12 @@ class RoutineViewModel(application: Application) : AndroidViewModel(application)
     fun scheduleAlarm(routine: RoutineEntity) {
         val context = getApplication<Application>().applicationContext
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // 정확한 알람을 설정할 수 있는 권한이 있는지 확인
+            if (!alarmManager.canScheduleExactAlarms()) {
+                return // 권한이 없으므로 알람 설정 중단
+            }
+        }
         // 기존에 설정된 알람이 있다면 취소
         cancelAlarm(routine)
 
