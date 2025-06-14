@@ -25,41 +25,48 @@ class AlarmReceiver : BroadcastReceiver() {
         val routineId = intent.getIntExtra("ROUTINE_ID", 0)
         if (routineId == 0) return
 
+        // 1. goAsync()를 호출하여 PendingResult 객체를 받음
+        val pendingResult: PendingResult = goAsync()
+
         CoroutineScope(Dispatchers.IO).launch {
-            val db = AppDatabase.getInstance(context)
-            val today = LocalDate.now()
+            try {
+                val db = AppDatabase.getInstance(context)
+                val today = LocalDate.now()
 
-            // 1. 오늘 날짜의 루틴 기록이 있는지 확인
-            val recordCount = db.routineRecordDao().getRecordCountForToday(routineId, today)
+                val recordCount = db.routineRecordDao().getRecordCountForToday(routineId, today)
 
-            // 2. 기록이 없을 때만 (0개일 때만) 알림을 표시
-            if (recordCount == 0) {
-                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                val routineTitle = intent.getStringExtra("ROUTINE_TITLE") ?: "루틴 시간입니다!"
+                if (recordCount == 0) {
+                    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val routineTitle = intent.getStringExtra("ROUTINE_TITLE") ?: "루틴 시간입니다!"
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val channel = NotificationChannel(
-                        "routine_alarm_channel",
-                        "루틴 알림",
-                        NotificationManager.IMPORTANCE_HIGH
-                    ).apply {
-                        description = "설정한 루틴의 시작을 알립니다."
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val channel = NotificationChannel(
+                            "routine_alarm_channel",
+                            "루틴 알림",
+                            NotificationManager.IMPORTANCE_HIGH
+                        ).apply {
+                            description = "설정한 루틴의 시작을 알립니다."
+                        }
+                        notificationManager.createNotificationChannel(channel)
                     }
-                    notificationManager.createNotificationChannel(channel)
+
+                    val builder = NotificationCompat.Builder(context, "routine_alarm_channel")
+                        .setSmallIcon(R.drawable.ic_launcher_foreground)
+                        .setContentTitle(routineTitle)
+                        .setContentText("오늘의 루틴을 실천할 시간이에요! 💪")
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(true)
+
+                    notificationManager.notify(routineId, builder.build())
                 }
 
-                val builder = NotificationCompat.Builder(context, "routine_alarm_channel")
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setContentTitle(routineTitle)
-                    .setContentText("오늘의 루틴을 실천할 시간이에요! 💪")
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setAutoCancel(true)
+                // 알림 표시 여부와 상관없이, 다음 알람은 항상 다시 설정
+                rescheduleNextAlarm(context, routineId)
 
-                notificationManager.notify(routineId, builder.build())
+            } finally {
+                // 2. 모든 작업이 끝나면 반드시 finish()를 호출하여 리소스를 해제
+                pendingResult.finish()
             }
-
-            // 3. 알림 표시 여부와 상관없이, 다음 알람은 항상 다시 설정
-            rescheduleNextAlarm(context, routineId)
         }
     }
 

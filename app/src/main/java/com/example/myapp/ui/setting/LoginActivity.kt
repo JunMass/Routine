@@ -25,11 +25,7 @@ class LoginActivity : AppCompatActivity() {
     lateinit var loginButton: Button
     lateinit var showPasswordCheckBox: CheckBox
     lateinit var signUpButton: Button
-    lateinit var biometricLoginButton: Button
 
-//    lateinit var biometricPrompt: BiometricPrompt
-//    lateinit var promptInfo: BiometricPrompt.PromptInfo
-    private lateinit var passwordTableTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,12 +45,10 @@ class LoginActivity : AppCompatActivity() {
             }
         }
 
-        passwordTableTextView = findViewById(R.id.passwordTableTextView)
         idInput = findViewById(R.id.loginIdInput)               // 아이디 입력 필드 추가
         passwordInput = findViewById(R.id.loginPasswordInput)
         loginButton = findViewById(R.id.loginButton)
         showPasswordCheckBox = findViewById(R.id.loginShowPasswordCheckBox)
-        biometricLoginButton = findViewById(R.id.biometricLoginButton)
         signUpButton = findViewById(R.id.signupButton)
 
         db = object : SQLiteOpenHelper(this, "PasswordDB", null, 1) {
@@ -176,6 +170,5 @@ class LoginActivity : AppCompatActivity() {
         }
         cursor.close()
 
-        passwordTableTextView.text = builder.toString()
     }
 }
