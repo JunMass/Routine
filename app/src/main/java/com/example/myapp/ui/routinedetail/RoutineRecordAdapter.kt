@@ -1,10 +1,8 @@
 package com.example.myapp.ui.routinedetail
 
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.example.myapp.R
 import android.view.View
 import com.example.myapp.databinding.RoutineRecordItemBinding
 import com.example.myapp.model.RoutineRecordEntity
@@ -23,7 +21,8 @@ class RoutineRecordAdapter (
                 -1 -> " 😢"
                 else -> " 😐"
             }
-            binding.tvRecordDate.text = record.date.toString() + sentiment
+            val dateAndSentiment = record.date.toString() + sentiment
+            binding.tvRecordDate.text = dateAndSentiment
             binding.tvRecordDetail.text = record.detail ?: ""
             if (!record.photoUri.isNullOrEmpty()) {
                 binding.imageRecordPhoto.visibility = View.VISIBLE
