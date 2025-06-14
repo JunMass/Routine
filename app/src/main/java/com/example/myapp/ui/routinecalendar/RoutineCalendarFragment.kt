@@ -13,6 +13,10 @@ import com.example.myapp.model.Weekday
 import com.example.myapp.ui.RoutineViewModel
 import java.time.LocalDate
 import android.util.Log
+import androidx.navigation.fragment.findNavController
+import com.example.myapp.R
+import com.example.myapp.model.RoutineEntity
+import com.example.myapp.model.RoutineRecordWithTitle
 
 class RoutineCalendarFragment : Fragment() {
     private var _binding: FragmentRoutineCalendarBinding? = null
@@ -31,7 +35,7 @@ class RoutineCalendarFragment : Fragment() {
         // RecyclerView 어댑터 설정
         adapter = RoutineCalenderAdapter(
             emptyList(),
-            onItemClick = { /* 필요시 구현 */ }
+            onItemClick = { routine -> showRoutineDetails(routine) }
         )
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -51,6 +55,13 @@ class RoutineCalendarFragment : Fragment() {
         }
 
         return binding.root
+    }
+
+    private fun showRoutineDetails(routine: RoutineRecordWithTitle) {
+        val bundle = Bundle().apply {
+            putInt("routine_id", routine.record.routineId)
+        }
+        findNavController().navigate(R.id.action_routineCalendarFragment_to_routineDetailFragment, bundle)
     }
 
     override fun onDestroyView() {

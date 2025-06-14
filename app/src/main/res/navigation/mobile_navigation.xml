@@ -19,7 +19,12 @@
         android:id="@+id/nav_routine_calendar"
         android:name="com.example.myapp.ui.routinecalendar.RoutineCalendarFragment"
         android:label="@string/menu_routine_calendar"
-        tools:layout="@layout/fragment_routine_calendar" />
+        tools:layout="@layout/fragment_routine_calendar">
+        <action
+            android:id="@+id/action_routineCalendarFragment_to_routineDetailFragment"
+            app:destination="@id/routine_detail_fragment" />
+    </fragment>
+
     <fragment
         android:id="@+id/routine_detail_fragment"
         android:name="com.example.myapp.ui.routinedetail.RoutineDetailFragment"

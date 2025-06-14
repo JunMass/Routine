@@ -16,7 +16,7 @@ class RoutineCalenderAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecordViewHolder{
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.routine_item, parent, false)
+            .inflate(R.layout.routine_item_without_buttons, parent, false)
         return RecordViewHolder(view)
     }
 
