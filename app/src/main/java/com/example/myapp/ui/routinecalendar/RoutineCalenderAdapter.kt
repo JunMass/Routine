@@ -7,7 +7,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapp.R
 import com.example.myapp.model.RoutineRecordWithTitle
-import com.example.myapp.ui.routinedetail.RoutineRecordAdapter
 
 class RoutineCalenderAdapter(
     private var items: List<RoutineRecordWithTitle>,
