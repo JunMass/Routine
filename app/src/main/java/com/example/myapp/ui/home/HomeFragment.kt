@@ -39,11 +39,24 @@ import com.example.myapp.weather.WeatherRepository
 import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import com.bumptech.glide.Glide
+import com.example.myapp.model.Friend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.google.firebase.firestore.FirebaseFirestore
+import org.json.JSONObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Request
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import java.io.IOException
 
 class HomeFragment : Fragment() {
 
@@ -227,6 +240,7 @@ class HomeFragment : Fragment() {
                 dialog.dismiss()
             }
     }
+
     private fun showAddRoutineDialog() {
         val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -235,6 +249,39 @@ class HomeFragment : Fragment() {
             .setPositiveButton("추가", null)
             .setNegativeButton("취소", null)
             .show()
+
+        // 친구 목록 관련 변수
+        var friendList: MutableList<Friend>? = null
+        lateinit var friendAdapter: FriendSelectAdapter
+
+        // 친구 목록 불러오기
+        val prefs = requireContext().getSharedPreferences("loginPrefs", Context.MODE_PRIVATE)
+        val currentUid = prefs.getString("userId", null)
+
+        if (currentUid != null) {
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(currentUid)
+                .collection("friends")
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    friendList = snapshot.documents.mapNotNull {
+                        it.toObject(Friend::class.java)
+                    }.toMutableList()
+
+                    friendAdapter = FriendSelectAdapter(friendList!!)
+                    dialogBinding.recyclerViewFriendSelect.apply {
+                        layoutManager = LinearLayoutManager(requireContext())
+                        adapter = friendAdapter
+                        visibility = View.GONE
+                    }
+
+                    dialogBinding.checkBoxShare.setOnCheckedChangeListener { _, isChecked ->
+                        dialogBinding.recyclerViewFriendSelect.visibility =
+                            if (isChecked) View.VISIBLE else View.GONE
+                    }
+                }
+        }
 
         // 기본 값 설정
         dialogBinding.editTitle.setText("")
@@ -260,39 +307,46 @@ class HomeFragment : Fragment() {
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
             .setOnClickListener {
                 val title = dialogBinding.editTitle.text.toString().trim()
-                val isActive = dialogBinding.switchActive.isChecked // 스위치의 실제 상태를 읽어옵니다.
+                val isActive = dialogBinding.switchActive.isChecked
+
                 if (title.isEmpty()) {
                     dialogBinding.editTitle.error = "제목을 입력하세요"
                     return@setOnClickListener
                 }
+
                 val timeButtonText = dialogBinding.timeButton.text.toString()
-                if (isActive && timeButtonText == "시간 설정") { // "시간 설정" 문자열 리소스로 비교
+                if (isActive && timeButtonText == "시간 설정") {
                     Toast.makeText(requireContext(), "알림을 받으려면 시간을 설정해야 합니다.", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
+
                 val repeatOn = Weekday.entries.filter { day ->
                     dialogBinding.root.findViewWithTag<CheckBox>("cb_$day")?.isChecked == true
                 }.toSet().takeIf { it.isNotEmpty() } ?: setOf(LocalDate.now().dayOfWeek.let {
                     Weekday.valueOf(it.name)
                 })
+
                 val startTime = if (isActive) {
-                    // 위에서 유효성 검사를 통과했으므로, 이 시점에서 timeButtonText는 항상 "HH:mm" 형식임이 보장됩니다.
                     val timeParts = timeButtonText.split(":")
-                    LocalTime.of(
-                        timeParts[0].toInt(),
-                        timeParts[1].toInt()
-                    )
+                    LocalTime.of(timeParts[0].toInt(), timeParts[1].toInt())
                 } else {
-                    // 알림이 꺼져있으면 시간은 중요하지 않으므로 기본값을 사용합니다.
                     LocalTime.MIDNIGHT
                 }
 
-                viewModel.addRoutine(title, repeatOn, startTime, isActive)
+                // 공유 여부 & 선택된 UID 추출
+                val isShared = dialogBinding.checkBoxShare.isChecked
+                val sharedWith = if (isShared && friendList != null) {
+                    friendList!!.filter { it.isChecked }.map { it.uid }
+                } else {
+                    emptyList()
+                }
+
+                // ViewModel에 공유 정보까지 전달
+                viewModel.addRoutine(title, repeatOn, startTime, isActive, isShared, sharedWith)
                 dialog.dismiss()
             }
-
-
     }
+
 
     private fun showRoutineDetails(routine: RoutineEntity) {
         val bundle = Bundle().apply {
@@ -371,6 +425,17 @@ class HomeFragment : Fragment() {
                             detail = detail,
                             photoUri = localUri?.toString()
                         )
+
+                        if (routine.isShared && routine.sharedWith.isNotEmpty()) {
+                            val prefs = requireContext().getSharedPreferences("loginPrefs", Context.MODE_PRIVATE)
+                            val currentUserId = prefs.getString("userId", null) ?: return@launch
+
+                            sendRoutinePerformedNotification(
+                                fromUserId = currentUserId,
+                                routineName = routine.title,
+                                sharedWith = routine.sharedWith
+                            )
+                        }
                     }
                     dialog.dismiss()
                 }
@@ -378,6 +443,40 @@ class HomeFragment : Fragment() {
             dialog.show()
         }
     }
+
+    private fun sendRoutinePerformedNotification(
+        fromUserId: String,
+        routineName: String,
+        sharedWith: List<String>
+    ) {
+        val client = OkHttpClient()
+
+        for (toUserId in sharedWith) {
+            val json = JSONObject().apply {
+                put("fromUser", fromUserId)
+                put("toUser", toUserId)
+                put("routineName", routineName)
+            }
+
+            val requestBody = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+
+            val request = Request.Builder()
+                .url("https://routine-server-uqzh.onrender.com/notify") // 에뮬레이터 기준
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    Log.e("FCM", "전송 실패: ${e.message}")
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    Log.d("FCM", "전송 성공: ${response.code}")
+                }
+            })
+        }
+    }
+
 
     override fun onDestroyView() {
         super.onDestroyView()

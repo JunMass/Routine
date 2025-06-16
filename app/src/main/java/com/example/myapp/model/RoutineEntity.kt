@@ -14,6 +14,8 @@ data class RoutineEntity(
     val title: String,                // 예: "5분 책 읽기"
     val repeatOn: Set<Weekday>,       // MON, WED, FRI 등
     val startTime: LocalTime,         // 알람 시간 (예: 07:30)
-    val isActive: Boolean = true      // 켜짐/꺼짐
+    val isActive: Boolean = true,      // 켜짐/꺼짐
+    val isShared: Boolean = false,            // 공유 여부 플래그
+    val sharedWith: List<String> = emptyList() // 공유 대상 UID 목록
 )
 

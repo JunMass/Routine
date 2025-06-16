@@ -7,18 +7,27 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
-import android.text.InputType
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.myapp.R
 import java.security.MessageDigest
+import org.json.JSONObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Request
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import java.io.IOException
 
 class SignUpActivity : AppCompatActivity() {
 
     lateinit var db: SQLiteDatabase
     lateinit var idInput: EditText
+    lateinit var nicknameInput: EditText
     lateinit var passwordInput: EditText
     lateinit var passwordConfirmInput: EditText
     lateinit var signUpButton: Button
@@ -28,6 +37,7 @@ class SignUpActivity : AppCompatActivity() {
         setContentView(R.layout.activity_sign_up)
 
         idInput = findViewById(R.id.signUpIdInput)
+        nicknameInput = findViewById(R.id.signUpNicknameInput)
         passwordInput = findViewById(R.id.signUpPasswordInput)
         passwordConfirmInput = findViewById(R.id.signUpPasswordConfirmInput)
         signUpButton = findViewById(R.id.signUpButton)
@@ -63,12 +73,13 @@ class SignUpActivity : AppCompatActivity() {
         }.writableDatabase
 
         signUpButton.setOnClickListener {
-            val userId = idInput.text.toString()
-            val password = passwordInput.text.toString()
-            val confirm = passwordConfirmInput.text.toString()
+            val userId = idInput.text.toString().trim()
+            val password = passwordInput.text.toString().trim()
+            val confirm = passwordConfirmInput.text.toString().trim()
+            val nickname = nicknameInput.text.toString().trim()  // 추가된 닉네임 필드
 
-            if (userId.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
-                Toast.makeText(this, "아이디와 비밀번호를 모두 입력하세요", Toast.LENGTH_SHORT).show()
+            if (userId.isEmpty() || password.isEmpty() || confirm.isEmpty() || nickname.isEmpty()) {
+                Toast.makeText(this, "모든 항목을 입력하세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -77,24 +88,43 @@ class SignUpActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val hashedPassword = hashPassword(password)
-
-            val cursor = db.rawQuery("SELECT * FROM PasswordTable WHERE user_id = ?", arrayOf(userId))
-            if (cursor.moveToFirst()) {
-                Toast.makeText(this, "이미 존재하는 아이디입니다", Toast.LENGTH_SHORT).show()
-                cursor.close()
-                return@setOnClickListener
+            val json = JSONObject().apply {
+                put("userId", userId)
+                put("password", password)
+                put("nickname", nickname)
             }
-            cursor.close()
-            db.execSQL(
-                "INSERT INTO PasswordTable (user_id, password, hs_password) VALUES (?, ?, ?)",
-                arrayOf(userId, password, hashedPassword)
-            )
-            Toast.makeText(this, "회원가입 완료", Toast.LENGTH_SHORT).show()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
 
+            val body = json.toString().toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url("https://routine-server-uqzh.onrender.com/register-user")
+                .post(body)
+                .build()
+
+            OkHttpClient().newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    runOnUiThread {
+                        Toast.makeText(this@SignUpActivity, "회원가입 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    runOnUiThread {
+                        if (response.isSuccessful) {
+                            Toast.makeText(this@SignUpActivity, "회원가입 성공", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(this@SignUpActivity, LoginActivity::class.java))
+                            finish()
+                        } else if (response.code == 409) {
+                            Toast.makeText(this@SignUpActivity, "이미 존재하는 ID입니다", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@SignUpActivity, "서버 오류", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            })
         }
+
+
+
     }
 
     private fun hashPassword(password: String): String {

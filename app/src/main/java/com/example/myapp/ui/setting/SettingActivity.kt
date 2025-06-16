@@ -6,7 +6,6 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.commit
 import com.example.myapp.R
 
 class SettingActivity : AppCompatActivity() {

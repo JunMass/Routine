@@ -44,13 +44,17 @@ class RoutineViewModel(application: Application) : AndroidViewModel(application)
         title: String,
         repeatOn: Set<Weekday>,
         startTime: LocalTime,
-        isActive: Boolean
+        isActive: Boolean,
+        isShared: Boolean,
+        sharedWith: List<String>
     ) {
         val routine = RoutineEntity(
             title = title,
             repeatOn = repeatOn,
             startTime = startTime,
-            isActive = isActive
+            isActive = isActive,
+            isShared = isShared,
+            sharedWith = sharedWith
         )
         viewModelScope.launch {
             val newId = repository.insertRoutine(routine) // insert 후 새로운 ID를 받아옴

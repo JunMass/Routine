@@ -6,16 +6,20 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
-import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-//import androidx.biometric.BiometricManager
-//import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
 import com.example.myapp.MainActivity
 import com.example.myapp.R
 import java.security.MessageDigest
-import java.util.concurrent.Executor
+import org.json.JSONObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Request
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
 
@@ -83,71 +87,53 @@ class LoginActivity : AppCompatActivity() {
         }
 
         loginButton.setOnClickListener {
-            val userId = idInput.text.toString()
-            val inputPassword = passwordInput.text.toString()
+            val userId = idInput.text.toString().trim()
+            val password = passwordInput.text.toString().trim()
 
-            if (userId.isEmpty() || inputPassword.isEmpty()) {
+            if (userId.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "아이디와 비밀번호를 입력하세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            val cursor = db.rawQuery(
-                "SELECT hs_password FROM PasswordTable WHERE user_id = ?",
-                arrayOf(userId)
-            )
-
-            if (cursor.moveToFirst()) {
-                val savedHashedPassword = cursor.getString(0)
-                val inputHashed = hashPassword(inputPassword)
-                Log.d("LoginCheck", "inputHashed: $inputHashed, savedHashedPassword: $savedHashedPassword")
-                if (inputHashed == savedHashedPassword) {
-                    prefs.edit().putBoolean("isLoggedIn", true)
-                        .putString("userId", userId)
-                        .apply()
-
-                    Toast.makeText(this, "로그인 성공!", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                } else {
-                    Toast.makeText(this, "비밀번호가 틀렸습니다", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "존재하지 않는 아이디입니다", Toast.LENGTH_SHORT).show()
+            val json = JSONObject().apply {
+                put("userId", userId)
+                put("password", password)
             }
-            cursor.close()
+
+            val body = json.toString().toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url("https://routine-server-uqzh.onrender.com/login-user")
+                .post(body)
+                .build()
+
+            OkHttpClient().newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, "로그인 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    runOnUiThread {
+                        if (response.isSuccessful) {
+                            val prefs = getSharedPreferences("loginPrefs", MODE_PRIVATE)
+                            prefs.edit()
+                                .putBoolean("isLoggedIn", true)
+                                .putString("userId", userId)
+                                .apply()
+
+                            Toast.makeText(this@LoginActivity, "로그인 성공!", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                            finish()
+                        } else {
+                            Toast.makeText(this@LoginActivity, "로그인 실패: 아이디 또는 비밀번호 오류", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            })
         }
 
-//        val biometricManager = BiometricManager.from(this)
-//        if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) != BiometricManager.BIOMETRIC_SUCCESS) {
-//            biometricLoginButton.isEnabled = false
-//            biometricLoginButton.alpha = 0.5f
-//        }
-//
-//        executor = ContextCompat.getMainExecutor(this)
-//        biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
-//            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-//                super.onAuthenticationSucceeded(result)
-//                prefs.edit().putBoolean("isLoggedIn", true).apply()
-//                Toast.makeText(applicationContext, "지문 인증 성공", Toast.LENGTH_SHORT).show()
-//                startActivity(Intent(this@LoginActivity, MainActivity::class.java))
-//                finish()
-//            }
-//
-//            override fun onAuthenticationFailed() {
-//                super.onAuthenticationFailed()
-//                Toast.makeText(applicationContext, "지문 인증 실패", Toast.LENGTH_SHORT).show()
-//            }
-//        })
-//
-//        promptInfo = BiometricPrompt.PromptInfo.Builder()
-//            .setTitle("지문 인증")
-//            .setSubtitle("등록된 지문으로 로그인합니다")
-//            .setNegativeButtonText("취소")
-//            .build()
-//
-//        biometricLoginButton.setOnClickListener {
-//            biometricPrompt.authenticate(promptInfo)
-//        }
+
     }
 
     private fun hashPassword(password: String): String {

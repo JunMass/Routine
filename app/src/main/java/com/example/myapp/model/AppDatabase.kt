@@ -11,13 +11,14 @@ import androidx.room.TypeConverters
         RoutineEntity::class,
         RoutineRecordEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(
     LocalDateConverter::class,
     LocalTimeConverter::class,
-    WeekdayConverter::class
+    WeekdayConverter::class,
+    SharedWithConverter::class
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun routineDao(): RoutineDao

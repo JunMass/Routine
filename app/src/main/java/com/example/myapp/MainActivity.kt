@@ -2,12 +2,11 @@ package com.example.myapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
@@ -16,6 +15,17 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.example.myapp.databinding.ActivityMainBinding
+import com.google.firebase.messaging.FirebaseMessaging
+import android.content.Context
+import org.json.JSONObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Request
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
@@ -23,6 +33,19 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val sharedPref = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE)
+        val userId = sharedPref.getString("userId", "unknownUser") ?: "unknownUser"
+
+        // FCM 토큰 받아와서 서버로 전송
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                sendTokenToServer(userId, token)
+            } else {
+                Log.e("FCM", "토큰 가져오기 실패", task.exception)
+            }
+        }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         enableEdgeToEdge()
@@ -36,7 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_home, R.id.nav_routine_calendar
+                R.id.nav_home, R.id.nav_routine_calendar, R.id.nav_friends
             ), drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
@@ -64,5 +87,30 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun sendTokenToServer(userId: String, token: String) {
+        val json = JSONObject().apply {
+            put("userId", userId)
+            put("token", token)
+        }
+
+        val requestBody = json.toString()
+            .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("https://routine-server-uqzh.onrender.com/register-token")
+            .post(requestBody)
+            .build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("FCM", "토큰 전송 실패: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                Log.d("FCM", "토큰 전송 성공")
+            }
+        })
     }
 }
