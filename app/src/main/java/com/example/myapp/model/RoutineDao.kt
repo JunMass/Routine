@@ -23,6 +23,10 @@ interface RoutineDao {
     @Query("SELECT * FROM routines WHERE id = :id")
     fun getRoutineById(id: Int): LiveData<RoutineEntity?>
 
+    /** 특정 ID의 루틴을 반환 */
+    @Query("SELECT * FROM routines WHERE id = :id")
+    suspend fun getNoLiveRoutineById(id: Int): RoutineEntity?
+
     /** 루틴 삽입(이미 ID가 존재하면 교체) */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoutine(routine: RoutineEntity): Long

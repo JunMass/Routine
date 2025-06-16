@@ -279,7 +279,8 @@ class HomeFragment : Fragment() {
                     repeatOn = updatedRepeatOn,
                     startTime = updatedStartTime,
                     isActive = updatedIsActive,
-                    sharedWith = updatedSharedWith
+                    sharedWith = updatedSharedWith,
+                    isShared = updatedIsShared
                 )
 
                 viewModel.updateRoutine(updatedRoutine)
@@ -351,6 +352,7 @@ class HomeFragment : Fragment() {
             ).show()
         }
 
+        // 루틴 추가 버튼 클릭 시
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
             .setOnClickListener {
                 val title = dialogBinding.editTitle.text.toString().trim()
@@ -402,6 +404,7 @@ class HomeFragment : Fragment() {
         findNavController().navigate(R.id.action_homeFragment_to_routineDetailFragment, bundle)
     }
 
+    // 루틴 수행
     private fun showRoutineRecordDialog(routine: RoutineEntity) {
         val today = LocalDate.now()
 
@@ -503,6 +506,7 @@ class HomeFragment : Fragment() {
                 put("fromUser", fromUserId)
                 put("toUser", toUserId)
                 put("routineName", routineName)
+                put("isPerformed", "true")
             }
 
             val requestBody = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())

@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.myapp.R
 import com.example.myapp.model.AppDatabase
@@ -16,6 +17,15 @@ import com.example.myapp.model.Weekday
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import org.json.JSONObject
+import java.io.IOException
 import java.time.LocalTime
 import java.util.Calendar
 
@@ -57,9 +67,21 @@ class AlarmReceiver : BroadcastReceiver() {
                     .setAutoCancel(true)
 
                 notificationManager.notify(routineId, builder.build())
+
+                // 3. 공유 대상에게도 알람 보내기
+                val routine = db.routineDao().getNoLiveRoutineById(routineId)
+                if (routine?.isShared == true && routine.sharedWith.isNotEmpty()) {
+                    val prefs = context.getSharedPreferences("loginPrefs", Context.MODE_PRIVATE)
+                    val fromUserId = prefs.getString("userId", "") ?: ""
+                    sendRoutinePerformedNotification(
+                        fromUserId,
+                        routine.title,
+                        routine.sharedWith
+                    )
+                }
             }
 
-            // 3. 다음 알람을 다시 설정합니다.
+            // 4. 다음 알람을 다시 설정합니다.
             rescheduleNextAlarm(context, routineId)
         }
     }
@@ -148,6 +170,40 @@ class AlarmReceiver : BroadcastReceiver() {
             Calendar.FRIDAY -> Weekday.FRIDAY
             Calendar.SATURDAY -> Weekday.SATURDAY
             else -> throw IllegalArgumentException("Invalid day of week")
+        }
+    }
+
+    private fun sendRoutinePerformedNotification(
+        fromUserId: String,
+        routineName: String,
+        sharedWith: List<String>
+    ) {
+        val client = OkHttpClient()
+
+        for (toUserId in sharedWith) {
+            val json = JSONObject().apply {
+                put("fromUser", fromUserId)
+                put("toUser", toUserId)
+                put("routineName", routineName)
+                put("isPerformed", "false")
+            }
+
+            val requestBody = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+
+            val request = Request.Builder()
+                .url("https://routine-server-uqzh.onrender.com/notify") // 에뮬레이터 기준
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    Log.e("FCM", "전송 실패: ${e.message}")
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    Log.d("FCM", "전송 성공: ${response.code}")
+                }
+            })
         }
     }
 }
