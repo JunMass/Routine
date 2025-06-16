@@ -173,6 +173,7 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // 루틴 수정
     private fun showEditRoutineDialog(routine: RoutineEntity) {
         val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -191,7 +192,7 @@ class HomeFragment : Fragment() {
         dialogBinding.editTitle.setText(routine.title)
         dialogBinding.timeButton.text = routine.startTime.toString()
         dialogBinding.switchActive.isChecked = routine.isActive // '알림 활성화' 상태 불러오기
-
+        dialogBinding.checkBoxShare.isChecked = routine.isShared // '공유 여부' 상태 불러오기
         // 요일 체크박스 상태 설정
         Weekday.entries.forEach { day ->
             dialogBinding.root.findViewWithTag<CheckBox>("cb_$day")?.isChecked = routine.repeatOn.contains(day)
@@ -212,6 +213,44 @@ class HomeFragment : Fragment() {
             ).show()
         }
 
+        var friendList: MutableList<Friend>? = null
+        lateinit var friendAdapter: FriendSelectAdapter
+
+        val prefs = requireContext().getSharedPreferences("loginPrefs", Context.MODE_PRIVATE)
+        val currentUid = prefs.getString("userId", null)
+
+        if (currentUid != null) {
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(currentUid)
+                .collection("friends")
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    friendList = snapshot.documents.mapNotNull {
+                        it.toObject(Friend::class.java)
+                    }.toMutableList()
+
+                    // 🔽 루틴에 저장된 uid들과 비교해 체크 상태 초기화
+                    routine.sharedWith?.let { sharedUids ->
+                        friendList!!.forEach { friend ->
+                            friend.isChecked = sharedUids.contains(friend.uid)
+                        }
+                    }
+
+                    friendAdapter = FriendSelectAdapter(friendList!!)
+                    dialogBinding.recyclerViewFriendSelect.apply {
+                        layoutManager = LinearLayoutManager(requireContext())
+                        adapter = friendAdapter
+                        visibility = if (routine.isShared) View.VISIBLE else View.GONE
+                    }
+
+                    dialogBinding.checkBoxShare.setOnCheckedChangeListener { _, isChecked ->
+                        dialogBinding.recyclerViewFriendSelect.visibility =
+                            if (isChecked) View.VISIBLE else View.GONE
+                    }
+                }
+        }
+
         // 저장 버튼 클릭 시 'updateRoutine'을 호출합니다.
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
             .setOnClickListener {
@@ -227,15 +266,20 @@ class HomeFragment : Fragment() {
 
                 val timeParts = dialogBinding.timeButton.text.split(":")
                 val updatedStartTime = LocalTime.of(timeParts[0].toInt(), timeParts[1].toInt())
-
                 val updatedIsActive = dialogBinding.switchActive.isChecked // 수정된 '알림 활성화' 상태
+                val updatedIsShared = dialogBinding.checkBoxShare.isChecked // 수정된 '공유 여부' 상태
+
+                val updatedSharedWith = if (updatedIsShared && friendList != null) {
+                    friendList!!.filter { it.isChecked }.map { it.uid }
+                } else emptyList()
 
                 // 기존 routine 객체에 변경된 값들을 복사하여 새로운 객체 생성
                 val updatedRoutine = routine.copy(
                     title = title,
                     repeatOn = updatedRepeatOn,
                     startTime = updatedStartTime,
-                    isActive = updatedIsActive
+                    isActive = updatedIsActive,
+                    sharedWith = updatedSharedWith
                 )
 
                 viewModel.updateRoutine(updatedRoutine)
@@ -243,6 +287,7 @@ class HomeFragment : Fragment() {
             }
     }
 
+    // 루틴 추가
     private fun showAddRoutineDialog() {
         val dialogBinding = DialogEditRoutineBinding.inflate(layoutInflater)
         val dialog = androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -349,7 +394,7 @@ class HomeFragment : Fragment() {
             }
     }
 
-
+    // 루틴 상세 정보 화면으로 이동
     private fun showRoutineDetails(routine: RoutineEntity) {
         val bundle = Bundle().apply {
             putInt("routine_id", routine.id)
